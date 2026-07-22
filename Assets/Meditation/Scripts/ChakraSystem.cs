@@ -17,7 +17,7 @@ namespace Meditation
     [ExecuteAlways]
     public class ChakraSystem : MonoBehaviour
     {
-        public enum Mode { Wave, Manual }
+        public enum Mode { Wave, Manual, External }
 
         [System.Serializable]
         public struct Chakra
@@ -71,6 +71,10 @@ namespace Meditation
         static readonly Vector4[] _posArr = new Vector4[7];
         static readonly Vector4[] _colArr = new Vector4[7];
 
+        // Per-chakra levels driven from outside (mode == External), e.g. by
+        // GroundingEnergySystem's rising/descending vortex cycle.
+        readonly float[] _external = new float[7];
+
         float Period => _chakras.Length * step + fallTime + loopPause;
 
         static float Smooth(float x)
@@ -103,6 +107,8 @@ namespace Meditation
                     level = WaveLevel(i, t);
                 else if (mode == Mode.Manual && Application.isPlaying)
                     level = i < awakenedCount ? 1f : 0f;
+                else if (mode == Mode.External && Application.isPlaying)
+                    level = _external[i];
                 else
                     level = 1f; // editor preview: show all for placement
 
@@ -122,6 +128,21 @@ namespace Meditation
             mode = Mode.Manual;
             awakenedCount = Mathf.Clamp(count, 0, _chakras.Length);
         }
+
+        /// <summary>External mode: set one chakra's glow level directly.</summary>
+        public void SetExternalLevel(int index, float level)
+        {
+            if (index >= 0 && index < _external.Length)
+                _external[index] = Mathf.Clamp01(level);
+        }
+
+        /// <summary>External mode: darken all chakras.</summary>
+        public void ClearExternalLevels()
+        {
+            for (int i = 0; i < _external.Length; i++) _external[i] = 0f;
+        }
+
+        public Chakra GetChakra(int index) => _chakras[index];
 
         public int ChakraCount => _chakras.Length;
     }
