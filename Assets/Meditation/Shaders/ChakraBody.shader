@@ -14,6 +14,7 @@ Shader "Meditation/ChakraBody"
         _HaloExp   ("Halo Softness", Float) = 2
         _CoreBoost ("Core Boost", Float) = 1.6
         _HaloBoost ("Halo Boost", Float) = 0.55
+        _LightDir  ("Fake Light Directon", Vector) = (0,1,0,0)
     }
     SubShader
     {
@@ -26,20 +27,24 @@ Shader "Meditation/ChakraBody"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             #define MAX_CHAKRA 7
             float4 _ChakraPos[MAX_CHAKRA];    // xyz = world position, w = radius
             float4 _ChakraColor[MAX_CHAKRA];  // rgb = colour, a = intensity
             int    _ChakraCount;
 
+            CBUFFER_START(UnityPerMaterial)
             float4 _BaseColor;
             float  _BaseGlow;
             float  _CoreExp;
             float  _HaloExp;
             float  _CoreBoost;
             float  _HaloBoost;
+            float3 _LightDir;
+            CBUFFER_END
 
             struct Attributes
             {
@@ -67,10 +72,8 @@ Shader "Meditation/ChakraBody"
             half4 frag (Varyings IN) : SV_Target
             {
                 float3 N = normalize(IN.normalWS);
-                Light mainLight = GetMainLight();
-                float ndotl = saturate(dot(N, mainLight.direction));
-                float shade = ndotl * 0.7 + 0.3;            // soft, never fully black
-                float3 baseLit = _BaseColor.rgb * shade + _BaseColor.rgb * _BaseGlow;
+                float3 directLight = saturate(dot(N, _LightDir) * 0.5 + 0.5);
+                float3 baseLit = _BaseColor.rgb * (directLight + 0.3 + _BaseGlow);
 
                 float3 glow = float3(0, 0, 0);
                 [unroll(7)]
@@ -81,7 +84,7 @@ Shader "Meditation/ChakraBody"
                     // glow lands on the correct body part regardless of how far
                     // forward/back that part sits.
                     float d = length(IN.positionWS.xy - _ChakraPos[i].xy);
-                    float g = saturate(1.0 - d / radius);
+                    float g = 1.0 - saturate(d / radius);
                     float core = pow(g, _CoreExp);
                     float halo = pow(g, _HaloExp);
                     float intensity = _ChakraColor[i].a;
