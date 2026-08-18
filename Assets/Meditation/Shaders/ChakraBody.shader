@@ -73,7 +73,7 @@ Shader "Meditation/ChakraBody"
                 float3 baseLit = _BaseColor.rgb * shade + _BaseColor.rgb * _BaseGlow;
 
                 float3 glow = float3(0, 0, 0);
-                [loop]
+                [unroll(7)]
                 for (int i = 0; i < _ChakraCount; i++)
                 {
                     float radius = max(_ChakraPos[i].w, 1e-4);
