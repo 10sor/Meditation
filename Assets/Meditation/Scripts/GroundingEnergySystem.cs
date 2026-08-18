@@ -30,10 +30,6 @@ namespace Meditation
         public float coreFlare = 1.6f;
 
         [Header("Vortex")]
-        [Tooltip("Widest loop radius - how far the ribbons sweep around the body, metres.")]
-        public float whirlRadius = 1.25f;
-        [Tooltip("How far below the point the spiral funnel dissolves, metres.")]
-        public float spiralDepth = 5f;
         [Tooltip("Dots' flow speed along the path, path-lengths/second.")]
         public float flowRate = 0.075f;
         [Tooltip("HDR boost applied to the chakra colour.")]
@@ -57,7 +53,8 @@ namespace Meditation
         public float breathHoldTime = 8.01f;
         public float exhaleTime = 8.02f;
 
-        VortexParticles _vortex;
+        VortexParticles[] _vortices = System.Array.Empty<VortexParticles>();
+        Transform _vortexRoot;
         Transform _core;
         MeshRenderer _coreRenderer;
         int _chakra;
@@ -98,13 +95,12 @@ namespace Meditation
                 Apply();
             }
 
-            if (_vortex == null) return;
+            if (_vortices.Length == 0) return;
 
             if (!Application.isPlaying)
             {
                 // Editor preview: full spiral, streaming inward.
-                _vortex.intensity = 1f;
-                _vortex.flow = -Mathf.Abs(flowRate);
+                SetVortexState(1f, -Mathf.Abs(flowRate));
                 return;
             }
 
@@ -124,7 +120,7 @@ namespace Meditation
                 t = _audioLoops * clipLen + at - breathOffset;
                 if (t < 0f)
                 {
-                    _vortex.intensity = 0f;   // intro before the first inhale
+                    SetVortexIntensity(0f);   // intro before the first inhale
                     return;
                 }
             }
@@ -154,15 +150,14 @@ namespace Meditation
             if (tc < inhale)
             {
                 // Dots stream along the spiral INTO the point.
-                _vortex.flow = -Mathf.Abs(flowRate);
-                _vortex.intensity = Envelope(tc, inhale, 0.7f);
+                SetVortexState(Envelope(tc, inhale, 0.7f), -Mathf.Abs(flowRate));
                 glow = Smooth(tc / inhale);
                 coreBoost = coreFlare;
             }
             else if (tc < inhale + hold)
             {
                 // Absorbed: only the point glows.
-                _vortex.intensity = 0f;
+                SetVortexIntensity(0f);
                 glow = 1f;
             }
             else if (tc < inhale + hold + exhale)
@@ -170,13 +165,12 @@ namespace Meditation
                 // Dots stream back OUT of the point, down toward the earth;
                 // the glow leaves with them.
                 float te = tc - inhale - hold;
-                _vortex.flow = Mathf.Abs(flowRate);
-                _vortex.intensity = Envelope(te, exhale, 0.7f);
+                SetVortexState(Envelope(te, exhale, 0.7f), Mathf.Abs(flowRate));
                 glow = 1f - Smooth(te / exhale);
             }
             else
             {
-                _vortex.intensity = 0f;   // rest before the next colour
+                SetVortexIntensity(0f);   // rest before the next colour
                 glow = 0f;
             }
 
@@ -191,6 +185,23 @@ namespace Meditation
             if (chakras != null) chakras.SetExternalLevel(index, level);
         }
 
+        void SetVortexIntensity(float value)
+        {
+            for (int i = 0; i < _vortices.Length; i++)
+                if (_vortices[i] != null) _vortices[i].intensity = value;
+        }
+
+        void SetVortexState(float intensity, float flow)
+        {
+            for (int i = 0; i < _vortices.Length; i++)
+            {
+                var vortex = _vortices[i];
+                if (vortex == null) continue;
+                vortex.intensity = intensity;
+                vortex.flow = flow;
+            }
+        }
+
         Transform EnsureChild(string name)
         {
             var t = transform.Find(name);
@@ -203,18 +214,10 @@ namespace Meditation
             return t;
         }
 
-        void DestroyChild(string name)
-        {
-            var t = transform.Find(name);
-            if (t == null) return;
-            if (Application.isPlaying) Destroy(t.gameObject);
-            else DestroyImmediate(t.gameObject);
-        }
-
         /// <summary>Anchors the vortex at chakra i's point, in its colour.</summary>
         void SetupVortexForChakra(int index)
         {
-            if (_vortex == null) return;
+            if (_vortices.Length == 0) return;
 
             float height = 0.10f;
             Color color = new Color(0.95f, 0.07f, 0.10f);
@@ -225,11 +228,16 @@ namespace Meditation
                 color = c.color;
             }
 
-            _vortex.transform.localPosition = new Vector3(0f, height, 0f);
-            _vortex.depth = spiralDepth;
-            _vortex.maxRadius = whirlRadius;
-            _vortex.color = color * colorBoost;
-            _vortex.ApplyMaterialProps();
+            if (_vortexRoot != null)
+                _vortexRoot.localPosition = new Vector3(0f, height, 0f);
+
+            for (int i = 0; i < _vortices.Length; i++)
+            {
+                var vortex = _vortices[i];
+                if (vortex == null) continue;
+                vortex.color = color * colorBoost;
+                vortex.ApplyMaterialProps();
+            }
         }
 
         [ContextMenu("Rebuild")]
@@ -243,15 +251,13 @@ namespace Meditation
                     chakras = FindAnyObjectByType<ChakraSystem>();
             }
 
-            // Retired children from earlier iterations.
-            DestroyChild("DescendingVortex");
-            DestroyChild("AscendingVortex");
-            DestroyChild("ChakraVortexA");
-            DestroyChild("ChakraVortexB");
-
-            var vortexT = EnsureChild("ChakraVortex");
-            _vortex = vortexT.GetComponent<VortexParticles>();
-            if (_vortex == null) _vortex = vortexT.gameObject.AddComponent<VortexParticles>();
+            _vortexRoot = EnsureChild("ChakraVortex");
+            _vortices = _vortexRoot.GetComponentsInChildren<VortexParticles>(true);
+            if (_vortices.Length == 0)
+            {
+                _vortexRoot.gameObject.AddComponent<VortexParticles>();
+                _vortices = _vortexRoot.GetComponentsInChildren<VortexParticles>(true);
+            }
             SetupVortexForChakra(_chakra);
 
             // The earth core: the glowing orb far below.
