@@ -1,99 +1,180 @@
-// URP body shader for the meditating avatar. Renders her as a soft lit white
-// figure, then adds the seven chakra glows: each is a bright core ("dot") that
-// fades outward as a coloured gradient across the skin. Chakra positions,
-// colours, radii and intensities are fed in as GLOBAL shader arrays by the
-// ChakraSystem script (Shader.SetGlobalVectorArray), so every material using
-// this shader picks them up. Bloom turns the bright cores into a real glow.
 Shader "Meditation/ChakraBody"
 {
     Properties
     {
-        _BaseColor ("Base Color", Color) = (0.88, 0.92, 1, 1)
-        _BaseGlow  ("Base Glow", Range(0,2)) = 0.2
-        _CoreExp   ("Core Sharpness", Float) = 7
-        _HaloExp   ("Halo Softness", Float) = 2
-        _CoreBoost ("Core Boost", Float) = 1.6
-        _HaloBoost ("Halo Boost", Float) = 0.55
-        _LightDir  ("Fake Light Directon", Vector) = (0,1,0,0)
+        [MainTexture] _BaseMap ("Diffuse", 2D) = "white" {}
+        [MainColor] _BaseColor ("Base Color", Color) = (1, 1, 1, 1)
+        [Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
+        _BumpScale ("Normal Strength", Range(0, 2)) = 1
+        _RoughnessMap ("Roughness (R)", 2D) = "white" {}
+        _Roughness ("Roughness", Range(0, 1)) = 0.6
+
+        [Header(Single Chakra Emission)]
+        _ChakraHeight ("Chakra Height (World Space)", Float) = 1
+        [HDR] _ChakraColor ("Chakra Color", Color) = (2, 0.15, 0.05, 1)
+        _ChakraRadius ("Chakra Radius", Range(0.001, 2)) = 0.25
+        _ChakraIntensity ("Chakra Intensity", Range(0, 10)) = 1
+        _ChakraCore ("Core Sharpness", Range(0.25, 16)) = 5
+        _ChakraHalo ("Halo Sharpness", Range(0.25, 16)) = 2
+        _ChakraCoreBoost ("Core Boost", Range(0, 10)) = 1.5
+        _ChakraHaloBoost ("Halo Boost", Range(0, 10)) = 0.35
     }
+
     SubShader
     {
-        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "UniversalMaterialType"="Lit" "Queue"="Geometry" }
 
         Pass
         {
-            Tags { "LightMode"="UniversalForward" }
+            Name "ForwardLit"
+            Tags { "LightMode"="UniversalForwardOnly" }
+            Cull Back
+            ZWrite On
+            ZTest LEqual
 
             HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
+            #pragma target 3.0
+            #pragma vertex LitPassVertex
+            #pragma fragment LitPassFragment
+            #pragma multi_compile_instancing
+            #pragma instancing_options renderinglayer
+            #pragma multi_compile _ DOTS_INSTANCING_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fog
 
-            #define MAX_CHAKRA 7
-            float4 _ChakraPos[MAX_CHAKRA];    // xyz = world position, w = radius
-            float4 _ChakraColor[MAX_CHAKRA];  // rgb = colour, a = intensity
-            int    _ChakraCount;
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
+            TEXTURE2D(_RoughnessMap); SAMPLER(sampler_RoughnessMap);
 
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseColor;
-            float  _BaseGlow;
-            float  _CoreExp;
-            float  _HaloExp;
-            float  _CoreBoost;
-            float  _HaloBoost;
-            float3 _LightDir;
+                float4 _BaseMap_ST;
+                half4 _BaseColor;
+                half _BumpScale;
+                half _Roughness;
+                float _ChakraHeight;
+                half4 _ChakraColor;
+                half _ChakraRadius;
+                half _ChakraIntensity;
+                half _ChakraCore;
+                half _ChakraHalo;
+                half _ChakraCoreBoost;
+                half _ChakraHaloBoost;
             CBUFFER_END
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
-                float3 normalOS   : NORMAL;
+                float3 normalOS : NORMAL;
+                float4 tangentOS : TANGENT;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
-                float4 positionHCS : SV_POSITION;
-                float3 positionWS  : TEXCOORD0;
-                float3 normalWS    : TEXCOORD1;
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float3 positionWS : TEXCOORD1;
+                half3 normalWS : TEXCOORD2;
+                half4 tangentWS : TEXCOORD3;
+                float4 shadowCoord : TEXCOORD4;
+                half3 vertexLighting : TEXCOORD5;
+                half fogFactor : TEXCOORD6;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
-            Varyings vert (Attributes IN)
+            Varyings LitPassVertex(Attributes input)
             {
-                Varyings OUT;
-                VertexPositionInputs p = GetVertexPositionInputs(IN.positionOS.xyz);
-                OUT.positionHCS = p.positionCS;
-                OUT.positionWS  = p.positionWS;
-                OUT.normalWS    = TransformObjectToWorldNormal(IN.normalOS);
-                return OUT;
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                VertexPositionInputs positionInputs = GetVertexPositionInputs(input.positionOS.xyz);
+                VertexNormalInputs normalInputs = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+                output.positionCS = positionInputs.positionCS;
+                output.positionWS = positionInputs.positionWS;
+                output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
+                output.normalWS = normalInputs.normalWS;
+                output.tangentWS = half4(normalInputs.tangentWS, input.tangentOS.w * GetOddNegativeScale());
+                output.shadowCoord = GetShadowCoord(positionInputs);
+                output.vertexLighting = VertexLighting(positionInputs.positionWS, normalInputs.normalWS);
+                output.fogFactor = ComputeFogFactor(positionInputs.positionCS.z);
+                return output;
             }
 
-            half4 frag (Varyings IN) : SV_Target
+            half3 EvaluateChakraEmission(float3 positionWS)
             {
-                float3 N = normalize(IN.normalWS);
-                float3 directLight = saturate(dot(N, _LightDir) * 0.5 + 0.5);
-                float3 baseLit = _BaseColor.rgb * (directLight + 0.3 + _BaseGlow);
+                float distanceToCenter = distance(positionWS.xy, float2(0.0, _ChakraHeight));
+                half radial = saturate(1.0h - (half)(distanceToCenter / max(_ChakraRadius, 0.001h)));
+                half core = pow(radial, _ChakraCore) * _ChakraCoreBoost;
+                half halo = pow(radial, _ChakraHalo) * _ChakraHaloBoost;
+                return _ChakraColor.rgb * _ChakraIntensity * (core + halo);
+            }
 
-                float3 glow = float3(0, 0, 0);
-                [unroll(7)]
-                for (int i = 0; i < _ChakraCount; i++)
-                {
-                    float radius = max(_ChakraPos[i].w, 1e-4);
-                    // Depth-independent: distance in the world XY plane, so the
-                    // glow lands on the correct body part regardless of how far
-                    // forward/back that part sits.
-                    float d = length(IN.positionWS.xy - _ChakraPos[i].xy);
-                    float g = 1.0 - saturate(d / radius);
-                    float core = pow(g, _CoreExp);
-                    float halo = pow(g, _HaloExp);
-                    float intensity = _ChakraColor[i].a;
-                    glow += _ChakraColor[i].rgb * intensity * (core * _CoreBoost + halo * _HaloBoost);
-                }
+            half3 EvaluateLight(Light lightData, half3 normalWS, half3 viewDirectionWS,
+                                half3 albedo, half roughness)
+            {
+                half attenuation = lightData.distanceAttenuation * lightData.shadowAttenuation;
+                half ndotl = saturate(dot(normalWS, lightData.direction));
+                half3 diffuse = albedo * lightData.color * ndotl;
 
-                return half4(baseLit + glow, 1);
+                half3 halfDirection = SafeNormalize(lightData.direction + viewDirectionWS);
+                half smoothness = 1.0h - roughness;
+                half specularPower = exp2(1.0h + smoothness * 10.0h);
+                half specularTerm = pow(saturate(dot(normalWS, halfDirection)), specularPower);
+                half3 specular = lightData.color * 0.04h * specularTerm * smoothness;
+                return (diffuse + specular) * attenuation;
+            }
+
+            half4 LitPassFragment(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                half4 albedoSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
+                half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv), _BumpScale);
+                half roughness = saturate(_Roughness * SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, input.uv).r);
+                half3 bitangentWS = input.tangentWS.w * cross(input.normalWS, input.tangentWS.xyz);
+                half3x3 tangentToWorld = half3x3(input.tangentWS.xyz, bitangentWS, input.normalWS);
+
+                half3 normalWS = NormalizeNormalPerPixel(TransformTangentToWorld(normalTS, tangentToWorld));
+                half3 viewDirectionWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
+                half3 albedo = albedoSample.rgb * _BaseColor.rgb;
+
+                // SampleSH is the URP ambient probe and therefore follows
+                // Environment Lighting / Ambient Color in Render Settings.
+                half3 color = SampleSH(normalWS) * albedo;
+                Light mainLight = GetMainLight(input.shadowCoord, input.positionWS, half4(1, 1, 1, 1));
+                color += EvaluateLight(mainLight, normalWS, viewDirectionWS, albedo, roughness);
+
+                #if defined(_ADDITIONAL_LIGHTS)
+                    uint additionalLightCount = GetAdditionalLightsCount();
+                    LIGHT_LOOP_BEGIN(additionalLightCount)
+                        Light additionalLight = GetAdditionalLight(lightIndex, input.positionWS, half4(1, 1, 1, 1));
+                        color += EvaluateLight(additionalLight, normalWS, viewDirectionWS, albedo, roughness);
+                    LIGHT_LOOP_END
+                #elif defined(_ADDITIONAL_LIGHTS_VERTEX)
+                    color += input.vertexLighting * albedo;
+                #endif
+
+                color += EvaluateChakraEmission(input.positionWS);
+                color = MixFog(color, input.fogFactor);
+                return half4(color, 1);
             }
             ENDHLSL
         }
+
+        UsePass "Universal Render Pipeline/Lit/ShadowCaster"
+        UsePass "Universal Render Pipeline/Lit/DepthOnly"
+        UsePass "Universal Render Pipeline/Lit/DepthNormals"
+        UsePass "Universal Render Pipeline/Lit/Meta"
     }
+    FallBack "Hidden/Universal Render Pipeline/FallbackError"
 }
