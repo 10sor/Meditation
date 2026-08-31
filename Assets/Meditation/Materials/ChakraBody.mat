@@ -40,7 +40,7 @@ Material:
     - _BaseGlow: 0
     - _BumpScale: 1
     - _ChakraCore: 2.65
-    - _ChakraCoreBoost: 0.018
+    - _ChakraCoreBoost: 0.2
     - _ChakraHalo: 7.46
     - _ChakraHaloBoost: 8.69
     - _ChakraHeight: 1.01

@@ -64,7 +64,8 @@ Shader "Custom/VortexLine"
             half4 frag(Varyings IN) : SV_Target
             {
 
-                float time = sign(_Dir) * _Time.y * _SpeedMul;
+          //      float time = sign(_Dir) * _Time.y * _SpeedMul;
+                float time = -_Time.y * _SpeedMul;
                 half2 uvs = IN.uv.xy * float2(_Stretch, 1.0);
                 half2 offset = float2(time, 0.0);
                 half samp0 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uvs * _Scales.x + offset * _Speeds.x).r;

@@ -161,33 +161,35 @@ namespace Meditation
 
         float EvaluateVortexVisibility()
         {
-            if (sequence.Direction > 0 || sequence.PhaseTime < sequence.InhaleDuration)
+            float phaseTime = sequence.PhaseTime;
+            float inhaleEnd = sequence.InhaleDuration;
+            float exhaleStart = inhaleEnd + sequence.HoldDuration;
+
+            if (phaseTime < inhaleEnd)
+            {
+                float fadeTime = Mathf.Min(vortexFadeTime,
+                    sequence.InhaleDuration);
+                if (fadeTime <= 0.0001f)
+                    return 1f;
+
+                float fadeStartsAt = inhaleEnd - fadeTime;
+                return 1f - Smooth01((phaseTime - fadeStartsAt) / fadeTime);
+            }
+
+            if (phaseTime < exhaleStart)
+                return 0f;
+
+            float exhaleFadeTime = Mathf.Min(vortexFadeTime,
+                sequence.ExhaleDuration);
+            if (exhaleFadeTime <= 0.0001f)
                 return 1f;
 
-            float holdTime = sequence.HoldDuration;
-            float fadeTime = Mathf.Min(vortexFadeTime, holdTime * 0.5f);
-            if (fadeTime <= 0.0001f)
-                return 1f;
-
-            float holdProgress = sequence.PhaseTime - sequence.InhaleDuration;
-            float fadeOut = 1f - Smooth01(holdProgress / fadeTime);
-            float fadeIn = Smooth01((holdProgress - (holdTime - fadeTime)) / fadeTime);
-            return Mathf.Max(fadeOut, fadeIn);
+            return Smooth01((phaseTime - exhaleStart) / exhaleFadeTime);
         }
 
         bool IsVortexExhaling()
         {
-            if (sequence.Direction > 0)
-                return true;
-
-            float fadeTime = Mathf.Min(vortexFadeTime,
-                sequence.HoldDuration * 0.5f);
-            if (fadeTime <= 0.0001f)
-                return false;
-
-            float fadeInStartsAt = sequence.InhaleDuration +
-                                   sequence.HoldDuration - fadeTime;
-            return sequence.PhaseTime >= fadeInStartsAt;
+            return sequence.Direction > 0;
         }
 
         static float Smooth01(float value)

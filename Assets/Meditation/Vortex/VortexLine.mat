@@ -94,7 +94,7 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _Dir: -1
+    - _Dir: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
@@ -122,7 +122,7 @@ Material:
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.9031671, g: 0.07409566, b: 0, a: 0.08854872}
+    - _BaseColor: {r: 0, g: 1.4110533, b: 0.05580431, a: 0.47096676}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Scales: {r: 1, g: 2, b: 0.5, a: 5}

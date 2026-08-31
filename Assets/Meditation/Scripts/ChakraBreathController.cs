@@ -24,6 +24,7 @@ namespace Meditation
         public float PhaseTime { get; private set; }
         public float InhaleDuration => inhaleTime;
         public float HoldDuration => holdTime;
+        public float ExhaleDuration => exhaleTime;
 
         int previousSample;
         long completedSamples;
