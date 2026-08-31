@@ -39,13 +39,13 @@ Material:
     m_Floats:
     - _BaseGlow: 0
     - _BumpScale: 1
-    - _ChakraCore: 1.72
-    - _ChakraCoreBoost: 0.55
-    - _ChakraHalo: 5.27
-    - _ChakraHaloBoost: 0.82
-    - _ChakraHeight: 0.17
-    - _ChakraIntensity: 1.33
-    - _ChakraRadius: 0.204
+    - _ChakraCore: 2.65
+    - _ChakraCoreBoost: 0.018
+    - _ChakraHalo: 7.46
+    - _ChakraHaloBoost: 8.69
+    - _ChakraHeight: 1.01
+    - _ChakraIntensity: 0.884
+    - _ChakraRadius: 0.139
     - _CoreBoost: 1.08
     - _CoreExp: 5
     - _HaloBoost: 0.07
@@ -53,7 +53,7 @@ Material:
     - _Roughness: 0.529
     m_Colors:
     - _BaseColor: {r: 0.735849, g: 0.735849, b: 0.735849, a: 1}
-    - _ChakraColor: {r: 4.634989, g: 0.24919294, b: 0, a: 1}
+    - _ChakraColor: {r: 5.9921556, g: 0.13078417, b: 0, a: 0}
     - _LightDir: {r: 0, g: 1.1, b: -1.15, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

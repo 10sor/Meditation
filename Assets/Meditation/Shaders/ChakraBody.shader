@@ -13,11 +13,9 @@ Shader "Meditation/ChakraBody"
         _ChakraHeight ("Chakra Height (World Space)", Float) = 1
         [HDR] _ChakraColor ("Chakra Color", Color) = (2, 0.15, 0.05, 1)
         _ChakraRadius ("Chakra Radius", Range(0.001, 2)) = 0.25
-        _ChakraIntensity ("Chakra Intensity", Range(0, 10)) = 1
+        _ChakraIntensity ("Chakra Intensity", Range(0, 1)) = 1
         _ChakraCore ("Core Sharpness", Range(0.25, 16)) = 5
-        _ChakraHalo ("Halo Sharpness", Range(0.25, 16)) = 2
-        _ChakraCoreBoost ("Core Boost", Range(0, 10)) = 1.5
-        _ChakraHaloBoost ("Halo Boost", Range(0, 10)) = 0.35
+        _ChakraCoreBoost ("Core Boost", Range(0, 1)) = 1.0
     }
 
     SubShader
@@ -113,10 +111,9 @@ Shader "Meditation/ChakraBody"
             half3 EvaluateChakraEmission(float3 positionWS)
             {
                 float distanceToCenter = distance(positionWS.xy, float2(0.0, _ChakraHeight));
-                half radial = saturate(1.0h - (half)(distanceToCenter / max(_ChakraRadius, 0.001h)));
-                half core = pow(radial, _ChakraCore) * _ChakraCoreBoost;
-                half halo = pow(radial, _ChakraHalo) * _ChakraHaloBoost;
-                return _ChakraColor.rgb * _ChakraIntensity * (core + halo);
+                half radial = 1.0h - saturate(distanceToCenter / _ChakraRadius);
+               half core = pow(radial, _ChakraCore) * _ChakraCoreBoost;
+                return _ChakraColor.rgb * _ChakraIntensity * core;
             }
 
             half3 EvaluateLight(Light lightData, half3 normalWS, half3 viewDirectionWS,

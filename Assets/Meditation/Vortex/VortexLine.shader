@@ -31,12 +31,14 @@ Shader "Custom/VortexLine"
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                float4 vcol : COLOR;
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                float4 vcol : COLOR;
             };
 
             TEXTURE2D(_BaseMap);
@@ -55,22 +57,21 @@ Shader "Custom/VortexLine"
                 Varyings OUT;
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.vcol = IN.vcol;
                 return OUT;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
-                float mask = IN.uv.y * (1.0 - IN.uv.y);
-                //    mask *= mask;
+
                 float time = sign(_Dir) * _Time.y * _SpeedMul;
                 half2 uvs = IN.uv.xy * float2(_Stretch, 1.0);
-                half2 offset = float2(time, time * 0.1);
+                half2 offset = float2(time, 0.0);
                 half samp0 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uvs * _Scales.x + offset * _Speeds.x).r;
                 half samp1 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uvs * _Scales.y + offset * _Speeds.y).r;
                 half samp2 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uvs * _Scales.z + offset * _Speeds.z).r;
                 half4 final = 1;
-                final.rgb = saturate(smoothstep(0.0, 0.8, samp0 + samp1 + samp2 - 1.0 + mask))
-                          * mask * _BaseColor.rgb;
+                final.rgb = (samp0 + samp1 + samp2) * 0.33 * _BaseColor.rgb * IN.vcol.a;
 
                 return final;
             }

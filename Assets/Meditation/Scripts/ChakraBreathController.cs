@@ -21,6 +21,9 @@ namespace Meditation
         public int CurrentChakraIndex { get; private set; }
         public float Intensity { get; private set; }
         public int Direction { get; private set; } = -1;
+        public float PhaseTime { get; private set; }
+        public float InhaleDuration => inhaleTime;
+        public float HoldDuration => holdTime;
 
         int previousSample;
         long completedSamples;
@@ -42,6 +45,7 @@ namespace Meditation
             previousSample = 0;
             completedSamples = 0;
             fallbackTime = 0f;
+            PhaseTime = 0f;
 
             if (Application.isPlaying && playOnEnable && metronome != null &&
                 metronome.clip != null && !metronome.isPlaying)
@@ -83,6 +87,7 @@ namespace Meditation
                 CurrentChakraIndex = 0;
                 Intensity = 0f;
                 Direction = -1;
+                PhaseTime = 0f;
                 return;
             }
 
@@ -90,6 +95,7 @@ namespace Meditation
             int cycleIndex = Mathf.FloorToInt(timeline / cycle);
             CurrentChakraIndex = cycleIndex % Mathf.Max(1, chakraCount);
             float phaseTime = timeline - cycleIndex * cycle;
+            PhaseTime = phaseTime;
 
             if (phaseTime < inhaleTime)
             {
