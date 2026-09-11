@@ -21,6 +21,8 @@ namespace Meditation
         [Header("Vortex")]
         [SerializeField] ParticleVortex[] vortexes;
         [SerializeField] Material sharedVortexMaterial;
+        [SerializeField] Light vortexLight;
+        [SerializeField] Renderer emissionRenderer;
         [SerializeField] Transform targetPoints;
         [SerializeField] Transform vortexStartPointA;
         [SerializeField] Transform vortexStartPointB;
@@ -42,9 +44,11 @@ namespace Meditation
         static readonly int ChakraColorId = Shader.PropertyToID("_ChakraColor");
         static readonly int ChakraIntensityId = Shader.PropertyToID("_ChakraIntensity");
         static readonly int VortexColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
         static readonly int VortexDirectionId = Shader.PropertyToID("_Dir");
 
         MaterialPropertyBlock properties;
+        MaterialPropertyBlock emissionProperties;
         int appliedChakra = -1;
 
         void OnEnable()
@@ -134,11 +138,24 @@ namespace Meditation
             int direction = IsVortexExhaling() ? 1 : -1;
             float vortexVisibility = EvaluateVortexVisibility();
             Color vortexColor = chakra.color * sequence.Intensity;
+            Color visibleVortexColor = vortexColor * vortexVisibility;
             if (sharedVortexMaterial != null)
             {
-                sharedVortexMaterial.SetColor(VortexColorId,
-                    vortexColor * vortexVisibility);
+                sharedVortexMaterial.SetColor(VortexColorId, visibleVortexColor);
                 sharedVortexMaterial.SetFloat(VortexDirectionId, direction);
+            }
+
+            if (vortexLight != null)
+                vortexLight.color = visibleVortexColor;
+
+            if (emissionRenderer != null)
+            {
+                if (emissionProperties == null)
+                    emissionProperties = new MaterialPropertyBlock();
+
+                emissionRenderer.GetPropertyBlock(emissionProperties);
+                emissionProperties.SetColor(EmissionColorId, visibleVortexColor);
+                emissionRenderer.SetPropertyBlock(emissionProperties);
             }
 
             float vortexSpeed = direction * 0.5f;
