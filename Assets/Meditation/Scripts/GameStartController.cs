@@ -15,7 +15,17 @@ namespace Meditation
 
         bool isStarting;
 
+        void Awake()
+        {
+            SetWaitingState();
+        }
+
         void OnEnable()
+        {
+            SetWaitingState();
+        }
+
+        void SetWaitingState()
         {
             isStarting = false;
             if (canvasGroup != null)
@@ -26,7 +36,14 @@ namespace Meditation
             }
 
             if (chakraControllers != null)
+            {
+                ChakraRendererController[] renderers =
+                    chakraControllers.GetComponentsInChildren<ChakraRendererController>(true);
+                for (int i = 0; i < renderers.Length; i++)
+                    renderers[i].HideVisualization();
+
                 chakraControllers.SetActive(false);
+            }
         }
 
         void Update()

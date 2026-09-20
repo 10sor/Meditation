@@ -137,7 +137,7 @@ Shader "Meditation/ChakraBody"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 half4 albedoSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
                 half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv), _BumpScale);
-                half roughness = saturate(_Roughness * SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, input.uv).r);
+                half roughness = saturate(_Roughness * (1.0 - SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, input.uv).a));
                 half3 bitangentWS = input.tangentWS.w * cross(input.normalWS, input.tangentWS.xyz);
                 half3x3 tangentToWorld = half3x3(input.tangentWS.xyz, bitangentWS, input.normalWS);
 
