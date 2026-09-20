@@ -18,6 +18,7 @@ Shader "Custom/VortexLine"
         Pass
         {
             ZWrite Off
+            ZTest Always
             Blend One One
             Cull Off
             HLSLPROGRAM
