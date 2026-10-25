@@ -81,7 +81,7 @@ namespace Meditation
             EnsureSeparateChakraColors();
 
             if (sequence == null)
-                sequence = FindFirstObjectByType<ChakraBreathController>();
+                sequence = FindAnyObjectByType<ChakraBreathController>();
 
             if (targetRenderers == null || targetRenderers.Length == 0)
             {
@@ -168,7 +168,8 @@ namespace Meditation
                 targetRenderer.SetPropertyBlock(properties);
             }
 
-            int direction = IsVortexExhaling() ? 1 : -1;
+            // The crown chakra travels upwards during both breath phases.
+            int direction = index == 6 || IsVortexExhaling() ? 1 : -1;
             float vortexVisibility = EvaluateVortexVisibility();
             Color visibleEffectColor = chakra.effectColor * sequence.Intensity * vortexVisibility;
             if (sharedVortexMaterial != null)
@@ -179,7 +180,7 @@ namespace Meditation
 
             if (vortexLights != null)
             {
-                Color visibleLightColor = chakra.lightColor * sequence.Intensity * vortexVisibility;
+                Color visibleLightColor = chakra.lightColor * sequence.Intensity;
                 for (int i = 0; i < vortexLights.Length; i++)
                 {
                     if (vortexLights[i] != null)
@@ -193,14 +194,13 @@ namespace Meditation
                     emissionProperties = new MaterialPropertyBlock();
 
                 emissionRenderer.GetPropertyBlock(emissionProperties);
-                emissionProperties.SetColor(EmissionColorId, visibleEffectColor);
+                emissionProperties.SetColor(EmissionColorId,
+                    chakra.effectColor * sequence.Intensity);
                 emissionRenderer.SetPropertyBlock(emissionProperties);
             }
 
             float vortexSpeed = direction * 0.5f;
-            Transform vortexStart = direction > 0 && index == 6
-                ? vortexStartPointB
-                : vortexStartPointA;
+            Transform vortexStart = index == 6 ? vortexStartPointB : vortexStartPointA;
             if (vortexes != null)
             {
                 for (int i = 0; i < vortexes.Length; i++)
@@ -218,29 +218,32 @@ namespace Meditation
         float EvaluateVortexVisibility()
         {
             float phaseTime = sequence.PhaseTime;
-            float inhaleEnd = sequence.InhaleDuration;
-            float exhaleStart = inhaleEnd + sequence.HoldDuration;
+            float exhaleEnd = sequence.ExhaleDuration;
+            float inhaleStart = exhaleEnd + sequence.HoldDuration;
+            float inhaleEnd = inhaleStart + sequence.InhaleDuration;
 
-            if (phaseTime < inhaleEnd)
-            {
-                float fadeTime = Mathf.Min(vortexFadeTime,
-                    sequence.InhaleDuration);
-                if (fadeTime <= 0.0001f)
-                    return 1f;
+            if (phaseTime < exhaleEnd)
+                return EvaluatePhaseFade(phaseTime, 0f, sequence.ExhaleDuration);
 
-                float fadeStartsAt = inhaleEnd - fadeTime;
-                return 1f - Smooth01((phaseTime - fadeStartsAt) / fadeTime);
-            }
-
-            if (phaseTime < exhaleStart)
+            if (phaseTime < inhaleStart)
                 return 0f;
 
-            float exhaleFadeTime = Mathf.Min(vortexFadeTime,
-                sequence.ExhaleDuration);
-            if (exhaleFadeTime <= 0.0001f)
+            if (phaseTime >= inhaleEnd)
+                return 0f;
+
+            return EvaluatePhaseFade(phaseTime, inhaleStart, sequence.InhaleDuration);
+        }
+
+        float EvaluatePhaseFade(float phaseTime, float phaseStart, float phaseDuration)
+        {
+            float fadeTime = Mathf.Min(vortexFadeTime, phaseDuration * 0.5f);
+            if (fadeTime <= 0.0001f)
                 return 1f;
 
-            return Smooth01((phaseTime - exhaleStart) / exhaleFadeTime);
+            float timeInPhase = phaseTime - phaseStart;
+            float fadeIn = Smooth01(timeInPhase / fadeTime);
+            float fadeOut = Smooth01((phaseDuration - timeInPhase) / fadeTime);
+            return Mathf.Min(fadeIn, fadeOut);
         }
 
         bool IsVortexExhaling()

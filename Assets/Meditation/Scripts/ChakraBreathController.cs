@@ -2,57 +2,81 @@ using UnityEngine;
 
 namespace Meditation
 {
-    [DisallowMultipleComponent]
-    [RequireComponent(typeof(AudioSource))]
+//    [DisallowMultipleComponent]
+//    [RequireComponent(typeof(AudioSource))]
     public sealed class ChakraBreathController : MonoBehaviour
     {
-        [Header("Metronome")]
-        [SerializeField] AudioSource metronome;
+        [Header("Audio")]
+        [SerializeField] AudioSource metronomeSourceA;
+        [SerializeField] AudioSource metronomeSourceB;
+        [SerializeField] AudioSource exhaleSource;
+        [SerializeField] AudioSource inhaleSource;
+        [SerializeField] AudioClip metronomeClipA;
+        [SerializeField] AudioClip metronomeClipB;
+        [SerializeField] AudioClip exhaleClip;
+        [SerializeField] AudioClip inhaleClip;
         [SerializeField] bool playOnEnable = true;
+
+        [Header("Rhythm")]
+        [Min(1f)] [SerializeField] float beatsPerMinute = 60f;
+        [Min(1)] [SerializeField] int exhaleIntervals = 8;
+        [Min(0)] [SerializeField] int pauseIntervals = 8;
+        [Min(1)] [SerializeField] int inhaleIntervals = 4;
+        [Min(0)] [SerializeField] int endPauseIntervals = 8;
 
         [Header("Sequence")]
         [Min(1)] [SerializeField] int chakraCount = 7;
-        [Min(0f)] [SerializeField] float breathOffset = 0.46f;
-        [Min(0.01f)] [SerializeField] float breathCycle = 20.07f;
-        [Min(0f)] [SerializeField] float inhaleTime = 4.04f;
-        [Min(0f)] [SerializeField] float holdTime = 8.01f;
-        [Min(0f)] [SerializeField] float exhaleTime = 8.02f;
 
         public int CurrentChakraIndex { get; private set; }
         public float Intensity { get; private set; }
-        public int Direction { get; private set; } = -1;
+        public int Direction { get; private set; } = 1;
         public float PhaseTime { get; private set; }
-        public float InhaleDuration => inhaleTime;
-        public float HoldDuration => holdTime;
-        public float ExhaleDuration => exhaleTime;
+        public float ExhaleDuration => exhaleIntervals * BeatDuration;
+        public float HoldDuration => pauseIntervals * BeatDuration;
+        public float InhaleDuration => inhaleIntervals * BeatDuration;
+        public float EndPauseDuration => endPauseIntervals * BeatDuration;
 
-        int previousSample;
-        long completedSamples;
-        float fallbackTime;
+        float BeatDuration => 60f / Mathf.Max(1f, beatsPerMinute);
+        int CycleIntervals => Mathf.Max(1,
+            exhaleIntervals + pauseIntervals + inhaleIntervals + endPauseIntervals);
 
-        void Reset() => metronome = GetComponent<AudioSource>();
+        const double ScheduleLeadTime = 0.1;
+        double sequenceStartDspTime;
+        long nextBeatToSchedule;
+        long nextCycleToSchedule;
+        bool sequenceRunning;
+
+        void Reset() => metronomeSourceA = GetComponent<AudioSource>();
 
         void Awake()
         {
-            if (metronome == null)
-                metronome = GetComponent<AudioSource>();
+            if (metronomeSourceA == null)
+                metronomeSourceA = GetComponent<AudioSource>();
+
+            metronomeSourceB = EnsureSource(metronomeSourceB);
+            exhaleSource = EnsureSource(exhaleSource);
+            inhaleSource = EnsureSource(inhaleSource);
+            CopyAudioSettings(metronomeSourceA, metronomeSourceB);
+            CopyAudioSettings(metronomeSourceA, exhaleSource);
+            CopyAudioSettings(metronomeSourceA, inhaleSource);
+            ConfigureSource(metronomeSourceA);
+            ConfigureSource(metronomeSourceB);
+            ConfigureSource(exhaleSource);
+            ConfigureSource(inhaleSource);
+            LoadAudioData();
         }
 
         void OnEnable()
         {
-            CurrentChakraIndex = 0;
-            Intensity = 0f;
-            Direction = -1;
-            previousSample = 0;
-            completedSamples = 0;
-            fallbackTime = 0f;
-            PhaseTime = 0f;
+            ResetState();
+            if (Application.isPlaying && playOnEnable)
+                StartSequence();
+        }
 
-            if (Application.isPlaying && playOnEnable && metronome != null &&
-                metronome.clip != null && !metronome.isPlaying)
-            {
-                metronome.Play();
-            }
+        void OnDisable()
+        {
+            if (Application.isPlaying)
+                StopSequence();
         }
 
         void Update()
@@ -60,66 +84,175 @@ namespace Meditation
             if (!Application.isPlaying)
                 return;
 
-            float timeline = GetTimelineSeconds() - breathOffset;
+            if (!sequenceRunning)
+                return;
+
+            ScheduleAudio();
+            float timeline = Mathf.Max(0f,
+                (float)(AudioSettings.dspTime - sequenceStartDspTime));
             EvaluateTimeline(timeline);
         }
 
-        float GetTimelineSeconds()
+        void StartSequence()
         {
-            if (metronome != null && metronome.clip != null && metronome.isPlaying)
-            {
-                int currentSample = metronome.timeSamples;
-                int clipSamples = metronome.clip.samples;
-                if (currentSample < previousSample - clipSamples / 2)
-                    completedSamples += clipSamples;
+            StopSources();
+            sequenceStartDspTime = AudioSettings.dspTime + ScheduleLeadTime;
+            nextBeatToSchedule = 0;
+            nextCycleToSchedule = 0;
+            sequenceRunning = true;
+            ScheduleAudio();
+        }
 
-                previousSample = currentSample;
-                return (completedSamples + currentSample) / (float)metronome.clip.frequency;
+        void StopSequence()
+        {
+            sequenceRunning = false;
+            StopSources();
+        }
+
+        void ScheduleAudio()
+        {
+            double scheduleUntil = AudioSettings.dspTime + ScheduleLeadTime + 0.25;
+            double beatDuration = BeatDuration;
+
+            while (sequenceStartDspTime + nextBeatToSchedule * beatDuration <= scheduleUntil)
+            {
+                ScheduleMetronome(nextBeatToSchedule,
+                    sequenceStartDspTime + nextBeatToSchedule * beatDuration);
+                nextBeatToSchedule++;
             }
 
-            fallbackTime += Time.deltaTime;
-            return fallbackTime;
+            double cycleDuration = CycleIntervals * beatDuration;
+            while (sequenceStartDspTime + nextCycleToSchedule * cycleDuration <= scheduleUntil)
+            {
+                double cycleStart = sequenceStartDspTime + nextCycleToSchedule * cycleDuration;
+                ScheduleStretchedClip(exhaleSource, exhaleClip, cycleStart, ExhaleDuration);
+                ScheduleStretchedClip(inhaleSource, inhaleClip,
+                    cycleStart + ExhaleDuration + HoldDuration, InhaleDuration);
+                nextCycleToSchedule++;
+            }
+        }
+
+        void ScheduleMetronome(long beatIndex, double dspTime)
+        {
+            bool useA = (beatIndex & 1) == 0;
+            AudioSource source = useA ? metronomeSourceA : metronomeSourceB;
+            AudioClip clip = useA ? metronomeClipA : metronomeClipB;
+            if (source == null || clip == null)
+                return;
+
+            source.clip = clip;
+            source.pitch = 1f;
+            source.PlayScheduled(dspTime);
+        }
+
+        static void ScheduleStretchedClip(
+            AudioSource source, AudioClip clip, double dspTime, float targetDuration)
+        {
+            if (source == null || clip == null || targetDuration <= 0f)
+                return;
+
+            source.clip = clip;
+            source.pitch = Mathf.Clamp(clip.length / targetDuration, -3f, 3f);
+            source.PlayScheduled(dspTime);
+            source.SetScheduledEndTime(dspTime + targetDuration);
         }
 
         void EvaluateTimeline(float timeline)
         {
-            if (timeline < 0f)
-            {
-                CurrentChakraIndex = 0;
-                Intensity = 0f;
-                Direction = -1;
-                PhaseTime = 0f;
-                return;
-            }
-
-            float cycle = Mathf.Max(0.01f, breathCycle);
-            int cycleIndex = Mathf.FloorToInt(timeline / cycle);
+            float cycleDuration = CycleIntervals * BeatDuration;
+            int cycleIndex = Mathf.FloorToInt(timeline / cycleDuration);
             CurrentChakraIndex = cycleIndex % Mathf.Max(1, chakraCount);
-            float phaseTime = timeline - cycleIndex * cycle;
-            PhaseTime = phaseTime;
+            PhaseTime = timeline - cycleIndex * cycleDuration;
 
-            if (phaseTime < inhaleTime)
+            if (PhaseTime < ExhaleDuration)
+            {
+                Direction = 1;
+                Intensity = 1f - Smooth01(PhaseTime / Mathf.Max(0.001f, ExhaleDuration));
+            }
+            else if (PhaseTime < ExhaleDuration + HoldDuration)
+            {
+                Direction = 1;
+                Intensity = 0f;
+            }
+            else if (PhaseTime < ExhaleDuration + HoldDuration + InhaleDuration)
             {
                 Direction = -1;
-                Intensity = Smooth01(phaseTime / Mathf.Max(0.001f, inhaleTime));
+                float inhaleProgress = (PhaseTime - ExhaleDuration - HoldDuration) /
+                                       Mathf.Max(0.001f, InhaleDuration);
+                Intensity = Smooth01(inhaleProgress);
             }
-            else if (phaseTime < inhaleTime + holdTime)
+            else
             {
                 Direction = -1;
                 Intensity = 1f;
             }
-            else if (phaseTime < inhaleTime + holdTime + exhaleTime)
-            {
-                Direction = 1;
-                float exhaleProgress = (phaseTime - inhaleTime - holdTime) /
-                                       Mathf.Max(0.001f, exhaleTime);
-                Intensity = 1f - Smooth01(exhaleProgress);
-            }
-            else
-            {
-                Direction = 1;
-                Intensity = 0f;
-            }
+        }
+
+        AudioSource EnsureSource(AudioSource source)
+        {
+            if (source != null)
+                return source;
+
+            source = gameObject.AddComponent<AudioSource>();
+            ConfigureSource(source);
+            return source;
+        }
+
+        static void ConfigureSource(AudioSource source)
+        {
+            if (source == null)
+                return;
+
+            source.playOnAwake = false;
+            source.loop = false;
+        }
+
+        static void CopyAudioSettings(AudioSource template, AudioSource target)
+        {
+            if (template == null || target == null || template == target)
+                return;
+
+            target.outputAudioMixerGroup = template.outputAudioMixerGroup;
+            target.volume = template.volume;
+            target.spatialBlend = template.spatialBlend;
+            target.spatialize = template.spatialize;
+            target.dopplerLevel = template.dopplerLevel;
+            target.rolloffMode = template.rolloffMode;
+            target.minDistance = template.minDistance;
+            target.maxDistance = template.maxDistance;
+        }
+
+        void LoadAudioData()
+        {
+            if (metronomeClipA != null)
+                metronomeClipA.LoadAudioData();
+            if (metronomeClipB != null)
+                metronomeClipB.LoadAudioData();
+            if (exhaleClip != null)
+                exhaleClip.LoadAudioData();
+            if (inhaleClip != null)
+                inhaleClip.LoadAudioData();
+        }
+
+        void StopSources()
+        {
+            if (metronomeSourceA != null)
+                metronomeSourceA.Stop();
+            if (metronomeSourceB != null)
+                metronomeSourceB.Stop();
+            if (exhaleSource != null)
+                exhaleSource.Stop();
+            if (inhaleSource != null)
+                inhaleSource.Stop();
+        }
+
+        void ResetState()
+        {
+            CurrentChakraIndex = 0;
+            Intensity = 1f;
+            Direction = 1;
+            PhaseTime = 0f;
+            sequenceRunning = false;
         }
 
         static float Smooth01(float value)
@@ -131,10 +264,11 @@ namespace Meditation
         void OnValidate()
         {
             chakraCount = Mathf.Max(1, chakraCount);
-            breathCycle = Mathf.Max(0.01f, breathCycle);
-            inhaleTime = Mathf.Max(0f, inhaleTime);
-            holdTime = Mathf.Max(0f, holdTime);
-            exhaleTime = Mathf.Max(0f, exhaleTime);
+            beatsPerMinute = Mathf.Max(1f, beatsPerMinute);
+            exhaleIntervals = Mathf.Max(1, exhaleIntervals);
+            pauseIntervals = Mathf.Max(0, pauseIntervals);
+            inhaleIntervals = Mathf.Max(1, inhaleIntervals);
+            endPauseIntervals = Mathf.Max(0, endPauseIntervals);
         }
     }
 }

@@ -1883,14 +1883,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ee9aca9f3ed4144a814734186fe5d50, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Meditation.ChakraBreathController
-  metronome: {fileID: 3100000005}
+  metronomeSourceA: {fileID: 3100000005}
+  metronomeSourceB: {fileID: 0}
+  exhaleSource: {fileID: 0}
+  inhaleSource: {fileID: 0}
+  metronomeClipA: {fileID: 8300000, guid: 07b420d1600c4bc489901651ce0b6012, type: 3}
+  metronomeClipB: {fileID: 8300000, guid: 9fe3a9edc613e724396facc4f1df8d91, type: 3}
+  exhaleClip: {fileID: 8300000, guid: ca31890101252f94e9141bc96b5b6722, type: 3}
+  inhaleClip: {fileID: 8300000, guid: e7f4ea35c07761a4da19dff10681cfc1, type: 3}
   playOnEnable: 1
+  beatsPerMinute: 60
+  exhaleIntervals: 8
+  pauseIntervals: 8
+  inhaleIntervals: 4
+  endPauseIntervals: 8
   chakraCount: 7
-  breathOffset: 0.46
-  breathCycle: 20.07
-  inhaleTime: 4.04
-  holdTime: 8.01
-  exhaleTime: 8.02
 --- !u!114 &3100000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1916,7 +1923,7 @@ MonoBehaviour:
   targetPoints: {fileID: 313530987}
   vortexStartPointA: {fileID: 1912991991}
   vortexStartPointB: {fileID: 83669794}
-  vortexFadeTime: 0.7
+  vortexFadeTime: 0.25
   chakras:
   - name: Root
     height: 0.94
@@ -1950,11 +1957,11 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 5b21e1c357430dd45957568da3e4a87b, type: 3}
+  m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 0.85
   m_Pitch: 1
-  Loop: 1
+  Loop: 0
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
