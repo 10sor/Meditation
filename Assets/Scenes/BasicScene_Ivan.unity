@@ -1511,27 +1511,27 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalScale.x
-      value: 95.149635
+      value: 117.90661
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalScale.y
-      value: 95.149635
+      value: 117.90661
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalScale.z
-      value: 95.149635
+      value: 117.90661
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.44822
+      value: 0.44488
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.192
+      value: -0.42
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -5.91885
+      value: -5.9169
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18e156e0c4f474040b5451be6b3ef95b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1841,7 +1841,7 @@ Light:
   serializedVersion: 13
   m_Type: 1
   m_Color: {r: 0.79607844, g: 0.9458065, b: 1, a: 1}
-  m_Intensity: 0.09
+  m_Intensity: 0.06
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -2627,45 +2627,45 @@ MonoBehaviour:
   chakras:
   - name: Root
     height: 0.94
-    rendererColor: {r: 2.9960785, g: 0.059286974, b: 0, a: 1}
-    lightColor: {r: 0.9, g: 0.1, b: 0.12, a: 1}
-    effectColor: {r: 0.9, g: 0.1, b: 0.12, a: 1}
+    rendererColor: {r: 0.61, g: 0.08085855, b: 0.06954002, a: 1}
+    lightColor: {r: 1.0331956, g: 0.32980463, b: 0.05310817, a: 1}
+    effectColor: {r: 1.8294033, g: 0.16830501, b: 0.18408312, a: 1}
     separateColorsInitialized: 1
   - name: Sacral
-    height: 1.06
-    rendererColor: {r: 2.9960783, g: 0.8146268, b: 0, a: 1}
-    lightColor: {r: 0.95, g: 0.45, b: 0.1, a: 1}
-    effectColor: {r: 0.95, g: 0.45, b: 0.1, a: 1}
+    height: 1.09
+    rendererColor: {r: 0.667, g: 0.19061169, b: 0.052026007, a: 1}
+    lightColor: {r: 1.5471698, g: 0.8851937, b: 0.37219647, a: 1}
+    effectColor: {r: 1.9000001, g: 0.7521976, b: 0.2089005, a: 1}
     separateColorsInitialized: 1
   - name: SolarPlexus
-    height: 1.18
-    rendererColor: {r: 2.9960785, g: 2.5705998, b: 0, a: 1}
+    height: 1.24
+    rendererColor: {r: 0.72800004, g: 0.6352773, b: 0.07207203, a: 1}
     lightColor: {r: 0.97, g: 0.83, b: 0.15, a: 1}
-    effectColor: {r: 0.97, g: 0.83, b: 0.15, a: 1}
+    effectColor: {r: 1.94, g: 1.66, b: 0.3, a: 1}
     separateColorsInitialized: 1
   - name: Heart
-    height: 1.3
-    rendererColor: {r: 0, g: 2.9960783, b: 0.11848885, a: 1}
+    height: 1.39
+    rendererColor: {r: 0.085973665, g: 0.79245275, b: 0.11556447, a: 1}
     lightColor: {r: 0.2, g: 0.8, b: 0.3, a: 1}
-    effectColor: {r: 0.2, g: 0.8, b: 0.3, a: 1}
+    effectColor: {r: 0.4, g: 1.6, b: 0.6, a: 1}
     separateColorsInitialized: 1
   - name: Throat
-    height: 1.46
-    rendererColor: {r: 0, g: 2.288214, b: 2.9960785, a: 1}
-    lightColor: {r: 0, g: 2.288214, b: 2.9960785, a: 1}
-    effectColor: {r: 0, g: 2.288214, b: 2.9960785, a: 1}
+    height: 1.58
+    rendererColor: {r: 0, g: 0.5720535, b: 0.7490196, a: 1}
+    lightColor: {r: 0.18405126, g: 0.6779574, b: 0.8301887, a: 1}
+    effectColor: {r: 0.36862746, g: 1.3568628, b: 1.6627451, a: 1}
     separateColorsInitialized: 1
   - name: ThirdEye
-    height: 1.58
-    rendererColor: {r: 0, g: 0.22351275, b: 2.9960785, a: 1}
-    lightColor: {r: 0, g: 0.22351275, b: 2.9960785, a: 1}
-    effectColor: {r: 0, g: 0.22351275, b: 2.9960785, a: 1}
+    height: 1.83
+    rendererColor: {r: 0.07415297, g: 0.123619735, b: 0.7490196, a: 1}
+    lightColor: {r: 0.12941176, g: 0.21727213, b: 0.7921569, a: 1}
+    effectColor: {r: 0.29734182, g: 0.47154635, b: 1.6163194, a: 1}
     separateColorsInitialized: 1
   - name: Crown
-    height: 1.75
-    rendererColor: {r: 1.2400286, g: 0, b: 2.9960783, a: 1}
+    height: 1.92
+    rendererColor: {r: 0.31000715, g: 0, b: 0.74901956, a: 1}
     lightColor: {r: 0.7, g: 0.4, b: 0.95, a: 1}
-    effectColor: {r: 0.7, g: 0.4, b: 0.95, a: 1}
+    effectColor: {r: 1.4, g: 0.8, b: 1.9, a: 1}
     separateColorsInitialized: 1
 --- !u!82 &3100000005
 AudioSource:
