@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Meditation
@@ -15,19 +16,16 @@ namespace Meditation
         [SerializeField] AudioClip metronomeClipB;
         [SerializeField] AudioClip exhaleClip;
         [SerializeField] AudioClip inhaleClip;
-        [SerializeField] bool playOnEnable = true;
 
         [Header("Rhythm")]
         [Min(1f)] [SerializeField] float beatsPerMinute = 60f;
-        [Min(1)] [SerializeField] int exhaleIntervals = 8;
+        [Min(0)] [SerializeField] int exhaleIntervals = 8;
         [Min(0)] [SerializeField] int pauseIntervals = 8;
-        [Min(1)] [SerializeField] int inhaleIntervals = 4;
+        [Min(0)] [SerializeField] int inhaleIntervals = 4;
         [Min(0)] [SerializeField] int endPauseIntervals = 8;
 
-        [Header("Sequence")]
-        [Min(1)] [SerializeField] int chakraCount = 7;
+        public event Action BreathCycleCompleted;
 
-        public int CurrentChakraIndex { get; private set; }
         public float Intensity { get; private set; }
         public int Direction { get; private set; } = 1;
         public float PhaseTime { get; private set; }
@@ -35,16 +33,15 @@ namespace Meditation
         public float HoldDuration => pauseIntervals * BeatDuration;
         public float InhaleDuration => inhaleIntervals * BeatDuration;
         public float EndPauseDuration => endPauseIntervals * BeatDuration;
+        public float CycleDuration => ExhaleDuration + HoldDuration +
+                                      InhaleDuration + EndPauseDuration;
+        public bool IsCycleRunning { get; private set; }
+        public double CycleEndDspTime => sequenceStartDspTime + CycleDuration;
 
         float BeatDuration => 60f / Mathf.Max(1f, beatsPerMinute);
-        int CycleIntervals => Mathf.Max(1,
-            exhaleIntervals + pauseIntervals + inhaleIntervals + endPauseIntervals);
-
         const double ScheduleLeadTime = 0.1;
         double sequenceStartDspTime;
-        long nextBeatToSchedule;
-        long nextCycleToSchedule;
-        bool sequenceRunning;
+        int nextBeatToSchedule;
 
         void Reset() => metronomeSourceA = GetComponent<AudioSource>();
 
@@ -69,14 +66,12 @@ namespace Meditation
         void OnEnable()
         {
             ResetState();
-            if (Application.isPlaying && playOnEnable)
-                StartSequence();
         }
 
         void OnDisable()
         {
             if (Application.isPlaying)
-                StopSequence();
+                StopBreathCycle();
         }
 
         void Update()
@@ -84,51 +79,73 @@ namespace Meditation
             if (!Application.isPlaying)
                 return;
 
-            if (!sequenceRunning)
+            if (!IsCycleRunning)
                 return;
 
-            ScheduleAudio();
-            float timeline = Mathf.Max(0f,
-                (float)(AudioSettings.dspTime - sequenceStartDspTime));
-            EvaluateTimeline(timeline);
+            ScheduleMetronomeAudio();
+            double timeline = AudioSettings.dspTime - sequenceStartDspTime;
+            if (timeline < 0d)
+                return;
+
+            if (timeline >= CycleDuration)
+            {
+                IsCycleRunning = false;
+                StopSources();
+                ResetVisualState();
+                BreathCycleCompleted?.Invoke();
+                return;
+            }
+
+            EvaluateTimeline((float)timeline);
         }
 
-        void StartSequence()
+        public void StartBreathCycle()
         {
-            StopSources();
-            sequenceStartDspTime = AudioSettings.dspTime + ScheduleLeadTime;
+            StartBreathCycle(AudioSettings.dspTime + ScheduleLeadTime);
+        }
+
+        public void StartBreathCycle(double dspStartTime)
+        {
+            StopBreathCycle();
+            sequenceStartDspTime = dspStartTime;
             nextBeatToSchedule = 0;
-            nextCycleToSchedule = 0;
-            sequenceRunning = true;
+            IsCycleRunning = true;
             ScheduleAudio();
+
+            if (CycleDuration <= 0f)
+            {
+                IsCycleRunning = false;
+                BreathCycleCompleted?.Invoke();
+            }
         }
 
-        void StopSequence()
+        public void StopBreathCycle()
         {
-            sequenceRunning = false;
+            IsCycleRunning = false;
             StopSources();
+            ResetVisualState();
         }
 
         void ScheduleAudio()
         {
-            double scheduleUntil = AudioSettings.dspTime + ScheduleLeadTime + 0.25;
-            double beatDuration = BeatDuration;
+            ScheduleMetronomeAudio();
+            ScheduleStretchedClip(exhaleSource, exhaleClip,
+                sequenceStartDspTime, ExhaleDuration);
+            ScheduleStretchedClip(inhaleSource, inhaleClip,
+                sequenceStartDspTime + ExhaleDuration + HoldDuration, InhaleDuration);
+        }
 
-            while (sequenceStartDspTime + nextBeatToSchedule * beatDuration <= scheduleUntil)
+        void ScheduleMetronomeAudio()
+        {
+            int intervalCount = exhaleIntervals + pauseIntervals +
+                                inhaleIntervals + endPauseIntervals;
+            double scheduleUntil = AudioSettings.dspTime + ScheduleLeadTime + 0.25;
+            while (nextBeatToSchedule < intervalCount &&
+                   sequenceStartDspTime + nextBeatToSchedule * BeatDuration <= scheduleUntil)
             {
                 ScheduleMetronome(nextBeatToSchedule,
-                    sequenceStartDspTime + nextBeatToSchedule * beatDuration);
+                    sequenceStartDspTime + nextBeatToSchedule * BeatDuration);
                 nextBeatToSchedule++;
-            }
-
-            double cycleDuration = CycleIntervals * beatDuration;
-            while (sequenceStartDspTime + nextCycleToSchedule * cycleDuration <= scheduleUntil)
-            {
-                double cycleStart = sequenceStartDspTime + nextCycleToSchedule * cycleDuration;
-                ScheduleStretchedClip(exhaleSource, exhaleClip, cycleStart, ExhaleDuration);
-                ScheduleStretchedClip(inhaleSource, inhaleClip,
-                    cycleStart + ExhaleDuration + HoldDuration, InhaleDuration);
-                nextCycleToSchedule++;
             }
         }
 
@@ -159,10 +176,7 @@ namespace Meditation
 
         void EvaluateTimeline(float timeline)
         {
-            float cycleDuration = CycleIntervals * BeatDuration;
-            int cycleIndex = Mathf.FloorToInt(timeline / cycleDuration);
-            CurrentChakraIndex = cycleIndex % Mathf.Max(1, chakraCount);
-            PhaseTime = timeline - cycleIndex * cycleDuration;
+            PhaseTime = timeline;
 
             if (PhaseTime < ExhaleDuration)
             {
@@ -248,11 +262,15 @@ namespace Meditation
 
         void ResetState()
         {
-            CurrentChakraIndex = 0;
-            Intensity = 1f;
+            IsCycleRunning = false;
+            ResetVisualState();
+        }
+
+        void ResetVisualState()
+        {
+            Intensity = 0f;
             Direction = 1;
             PhaseTime = 0f;
-            sequenceRunning = false;
         }
 
         static float Smooth01(float value)
@@ -263,11 +281,10 @@ namespace Meditation
 
         void OnValidate()
         {
-            chakraCount = Mathf.Max(1, chakraCount);
             beatsPerMinute = Mathf.Max(1f, beatsPerMinute);
-            exhaleIntervals = Mathf.Max(1, exhaleIntervals);
+            exhaleIntervals = Mathf.Max(0, exhaleIntervals);
             pauseIntervals = Mathf.Max(0, pauseIntervals);
-            inhaleIntervals = Mathf.Max(1, inhaleIntervals);
+            inhaleIntervals = Mathf.Max(0, inhaleIntervals);
             endPauseIntervals = Mathf.Max(0, endPauseIntervals);
         }
     }

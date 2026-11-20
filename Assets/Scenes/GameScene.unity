@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 81f714daf7144784b8a2f42f1cd30927, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 67bdcbf7135349269bf1b8d930db8a4c, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -1304,6 +1304,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Meditation.GameStartController
   canvasGroup: {fileID: 1396165067}
   chakraControllers: {fileID: 3100000001}
+  meditationSequence: {fileID: 3100000005}
   fadeDuration: 0.25
 --- !u!23 &667978147 stripped
 MeshRenderer:
@@ -2228,7 +2229,7 @@ Light:
   serializedVersion: 13
   m_Type: 1
   m_Color: {r: 0.79607844, g: 0.9458065, b: 1, a: 1}
-  m_Intensity: 0.06
+  m_Intensity: 2.2
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -2290,13 +2291,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1183386341}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.044926785, y: 0.4322853, z: -0.6370286, w: -0.63663626}
+  m_LocalRotation: {x: 0.27201784, y: 0.22935559, z: -0.7113335, w: 0.6061411}
   m_LocalPosition: {x: 0.45322, y: 2.184, z: -6.59485}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 934182742}
-  m_LocalEulerAnglesHint: {x: 29.574, y: 315.67902, z: 77.762}
+  m_LocalEulerAnglesHint: {x: 139, y: 171.7, z: 77.762}
 --- !u!1 &1357797421
 GameObject:
   m_ObjectHideFlags: 0
@@ -3095,6 +3096,7 @@ GameObject:
   - component: {fileID: 3100000002}
   - component: {fileID: 3100000003}
   - component: {fileID: 3100000004}
+  - component: {fileID: 3100000005}
   m_Layer: 0
   m_Name: Chakra Controllers
   m_TagString: Untagged
@@ -3140,13 +3142,11 @@ MonoBehaviour:
   metronomeClipB: {fileID: 8300000, guid: 07b420d1600c4bc489901651ce0b6012, type: 3}
   exhaleClip: {fileID: 8300000, guid: ca31890101252f94e9141bc96b5b6722, type: 3}
   inhaleClip: {fileID: 8300000, guid: e7f4ea35c07761a4da19dff10681cfc1, type: 3}
-  playOnEnable: 1
   beatsPerMinute: 60
   exhaleIntervals: 8
   pauseIntervals: 8
   inhaleIntervals: 4
   endPauseIntervals: 4
-  chakraCount: 7
 --- !u!114 &3100000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3159,7 +3159,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c2f3a68e4634feea435e55663ea14a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Meditation.ChakraRendererController
-  sequence: {fileID: 3100000003}
+  breath: {fileID: 3100000003}
+  meditationSequence: {fileID: 3100000005}
   targetRenderers:
   - {fileID: 818205529}
   - {fileID: 818205528}
@@ -3225,6 +3226,22 @@ MonoBehaviour:
     lightColor: {r: 0.7, g: 0.4, b: 0.95, a: 1}
     effectColor: {r: 1.4, g: 0.8, b: 1.9, a: 1}
     separateColorsInitialized: 1
+--- !u!114 &3100000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76d875a21f924f568df4b6280f536f76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Meditation.MeditationSequenceController
+  breathController: {fileID: 3100000003}
+  pauseDuration: 5
+  countdownDuration: 3
+  cycleCount: 8
 --- !u!1001 &3679947133640575802
 PrefabInstance:
   m_ObjectHideFlags: 0

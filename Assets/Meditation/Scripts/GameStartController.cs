@@ -11,6 +11,7 @@ namespace Meditation
     {
         [SerializeField] CanvasGroup canvasGroup;
         [SerializeField] GameObject chakraControllers;
+        [SerializeField] MeditationSequenceController meditationSequence;
         [Min(0f)] [SerializeField] float fadeDuration = 0.25f;
 
         bool isStarting;
@@ -107,6 +108,9 @@ namespace Meditation
 
             if (chakraControllers != null)
                 chakraControllers.SetActive(true);
+
+            if (meditationSequence != null)
+                meditationSequence.StartMeditation();
 
             gameObject.SetActive(false);
         }

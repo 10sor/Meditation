@@ -20,7 +20,9 @@ namespace Meditation
         }
 
         [Header("References")]
-        [SerializeField] ChakraBreathController sequence;
+        [FormerlySerializedAs("sequence")]
+        [SerializeField] ChakraBreathController breath;
+        [SerializeField] MeditationSequenceController meditationSequence;
         [SerializeField] Renderer[] targetRenderers;
         [FormerlySerializedAs("targetRenderer")]
         [SerializeField, HideInInspector] Renderer legacyTargetRenderer;
@@ -80,8 +82,10 @@ namespace Meditation
         {
             EnsureSeparateChakraColors();
 
-            if (sequence == null)
-                sequence = FindAnyObjectByType<ChakraBreathController>();
+            if (breath == null)
+                breath = FindAnyObjectByType<ChakraBreathController>();
+            if (meditationSequence == null)
+                meditationSequence = FindAnyObjectByType<MeditationSequenceController>();
 
             if (targetRenderers == null || targetRenderers.Length == 0)
             {
@@ -135,13 +139,15 @@ namespace Meditation
 
         void Apply(bool force)
         {
-            if (sequence == null || !HasTargetRenderer() || chakras == null || chakras.Length == 0)
+            if (breath == null || meditationSequence == null || !HasTargetRenderer() ||
+                chakras == null || chakras.Length == 0)
                 return;
 
             if (properties == null)
                 properties = new MaterialPropertyBlock();
 
-            int index = Mathf.Clamp(sequence.CurrentChakraIndex, 0, chakras.Length - 1);
+            int index = Mathf.Clamp(meditationSequence.CurrentChakraIndex,
+                0, chakras.Length - 1);
             ChakraSettings chakra = chakras[index];
 
             if (force || index != appliedChakra)
@@ -164,14 +170,14 @@ namespace Meditation
                 targetRenderer.GetPropertyBlock(properties);
                 properties.SetFloat(ChakraHeightId, chakra.height);
                 properties.SetColor(ChakraColorId, chakra.rendererColor);
-                properties.SetFloat(ChakraIntensityId, sequence.Intensity);
+                properties.SetFloat(ChakraIntensityId, breath.Intensity);
                 targetRenderer.SetPropertyBlock(properties);
             }
 
             // The crown chakra travels upwards during both breath phases.
             int direction = index == 6 || IsVortexExhaling() ? 1 : -1;
             float vortexVisibility = EvaluateVortexVisibility();
-            Color visibleEffectColor = chakra.effectColor * sequence.Intensity * vortexVisibility;
+            Color visibleEffectColor = chakra.effectColor * breath.Intensity * vortexVisibility;
             if (sharedVortexMaterial != null)
             {
                 sharedVortexMaterial.SetColor(VortexColorId, visibleEffectColor);
@@ -180,7 +186,7 @@ namespace Meditation
 
             if (vortexLights != null)
             {
-                Color visibleLightColor = chakra.lightColor * sequence.Intensity;
+                Color visibleLightColor = chakra.lightColor * breath.Intensity;
                 for (int i = 0; i < vortexLights.Length; i++)
                 {
                     if (vortexLights[i] != null)
@@ -195,7 +201,7 @@ namespace Meditation
 
                 emissionRenderer.GetPropertyBlock(emissionProperties);
                 emissionProperties.SetColor(EmissionColorId,
-                    chakra.effectColor * sequence.Intensity);
+                    chakra.effectColor * breath.Intensity);
                 emissionRenderer.SetPropertyBlock(emissionProperties);
             }
 
@@ -217,13 +223,16 @@ namespace Meditation
 
         float EvaluateVortexVisibility()
         {
-            float phaseTime = sequence.PhaseTime;
-            float exhaleEnd = sequence.ExhaleDuration;
-            float inhaleStart = exhaleEnd + sequence.HoldDuration;
-            float inhaleEnd = inhaleStart + sequence.InhaleDuration;
+            if (!breath.IsCycleRunning)
+                return 0f;
+
+            float phaseTime = breath.PhaseTime;
+            float exhaleEnd = breath.ExhaleDuration;
+            float inhaleStart = exhaleEnd + breath.HoldDuration;
+            float inhaleEnd = inhaleStart + breath.InhaleDuration;
 
             if (phaseTime < exhaleEnd)
-                return EvaluatePhaseFade(phaseTime, 0f, sequence.ExhaleDuration);
+                return EvaluatePhaseFade(phaseTime, 0f, breath.ExhaleDuration);
 
             if (phaseTime < inhaleStart)
                 return 0f;
@@ -231,7 +240,7 @@ namespace Meditation
             if (phaseTime >= inhaleEnd)
                 return 0f;
 
-            return EvaluatePhaseFade(phaseTime, inhaleStart, sequence.InhaleDuration);
+            return EvaluatePhaseFade(phaseTime, inhaleStart, breath.InhaleDuration);
         }
 
         float EvaluatePhaseFade(float phaseTime, float phaseStart, float phaseDuration)
@@ -248,7 +257,7 @@ namespace Meditation
 
         bool IsVortexExhaling()
         {
-            return sequence.Direction > 0;
+            return breath.Direction > 0;
         }
 
         static float Smooth01(float value)
