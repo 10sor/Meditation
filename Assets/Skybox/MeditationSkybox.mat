@@ -27,11 +27,19 @@ Material:
         m_Texture: {fileID: 8900000, guid: d9198ff3726b1ed4bb4b5cddf95fb67e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Tex2:
+        m_Texture: {fileID: 8900000, guid: 2de2638aed272b54d8e693dee37e0b39, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _Exposure: 0.47
+    - _Lerp: 1
     - _Rotation: 36
+    - _Rotation2: 1.89
     m_Colors:
-    - _Tint: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
+    - _Axis: {r: 0.5, g: 0, b: 0.5, a: 0}
+    - _Tint: {r: 0.032004237, g: 0.05523313, b: 0.10943389, a: 1}
+    - _Tint2: {r: 0.030221315, g: 0.041700087, b: 0.0558094, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

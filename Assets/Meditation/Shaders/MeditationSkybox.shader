@@ -3,21 +3,32 @@ Shader "Meditation/Skybox Cubemap"
 {
     Properties
     {
-        [NoScaleOffset] _Tex ("Cubemap", Cube) = "grey" {}
-        _Tint ("Tint Color", Color) = (0.5, 0.5, 0.5, 0.5)
-        [Gamma] _Exposure ("Exposure", Range(0, 8)) = 1
+        [NoScaleOffset] [HDR] _Tex ("Cubemap", Cube) = "grey" {}
+        [HDR] _Tint ("Tint", Color) = (1,1,1,1)
         _Rotation ("Rotation", Range(0, 360)) = 0
+
+
+        [NoScaleOffset] [HDR] _Tex2 ("Cubemap", Cube) = "grey" {}
+        _Axis("Axis", Vector) = (0,1,0,0)
+        _Rotation2 ("Speed", Range(0, 5)) = 0
+
+        _Lerp("Lerp", Range(0,1)) = 0
+ //       [NoScaleOffset] [HDR] _TexMask ("Cubemap", Cube) = "white" {}
     }
 
     CGINCLUDE
     #include "UnityCG.cginc"
     struct appdata { float4 vertex : POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID };
-    struct v2f { float4 position : SV_POSITION; float3 direction : TEXCOORD0; UNITY_VERTEX_OUTPUT_STEREO };
+    struct v2f { float4 position : SV_POSITION; float3 direction : TEXCOORD0; float3 direction2 : TEXCOORD1; UNITY_VERTEX_OUTPUT_STEREO };
     samplerCUBE _Tex;
+    samplerCUBE _Tex2;
+ //   samplerCUBE _TexMask;
     half4 _Tex_HDR;
+    half _Lerp;
+    half4 _Axis;
     half4 _Tint;
-    half _Exposure;
     float _Rotation;
+    float _Rotation2;
 
     float3 RotateAroundY(float3 p, float degrees)
     {
@@ -26,23 +37,32 @@ Shader "Meditation/Skybox Cubemap"
         return float3(c * p.x - s * p.z, p.y, s * p.x + c * p.z);
     }
 
+    float3 Rotate(float3 p, float3 axis, float angle)
+    {
+        float s, c;
+        sincos(radians(angle), s, c);
+        return p * c + cross(axis, p) * s + axis * dot(axis, p) * (1 - c);
+    }
+
     v2f vert(appdata input)
     {
         v2f output;
         UNITY_SETUP_INSTANCE_ID(input);
         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-        float3 rotatedPosition = RotateAroundY(input.vertex.xyz, _Rotation);
-        output.position = UnityObjectToClipPos(float4(rotatedPosition, 1.0));
-        output.direction = rotatedPosition;
+        output.position = UnityObjectToClipPos(input.vertex.xyz);
+        output.direction = RotateAroundY(input.vertex.xyz, 504.0 + _Rotation);
+        output.direction2 = Rotate(input.vertex.xyz, normalize(_Axis), _Rotation2 * _Time.y);
         return output;
     }
 
     half4 frag(v2f input) : SV_Target
     {
         half4 encodedColor = texCUBE(_Tex, input.direction);
+        half mask = texCUBE(_Tex2, input.direction).a;
+        half4 encodedColor2 = texCUBE(_Tex2, input.direction2);
         half3 color = DecodeHDR(encodedColor, _Tex_HDR);
-        color *= _Tint.rgb * unity_ColorSpaceDouble.rgb * _Exposure;
-        return half4(color, 1.0);
+        half3 final = lerp(encodedColor * _Tint, encodedColor2, _Lerp * mask);
+        return half4(final, 1.0);
     }
     ENDCG
 
