@@ -80,23 +80,21 @@ namespace Meditation
 
         public void SetLerp(float value)
         {
-            lerp = value;
+            lerp = Mathf.Clamp01(value);
             ApplyCurrentState();
         }
 
         public void Apply(float value)
-        { 
-                skyboxMaterial.SetFloat(SkyboxLerpId, value * value * value);
+        {
+            value = Mathf.Clamp01(value);
+            float value_cube = value * value * value;
+
+                skyboxMaterial.SetFloat(SkyboxLerpId, value_cube);
                 skyboxMaterial.SetColor(SkyboxTintId, Color.Lerp(stateA.skyTint, stateB.skyTint, value));
 
-            if (directionalLight == null)
-                return;
-
-            directionalLight.transform.eulerAngles =  Vector3.Slerp(
-                stateA.direction, stateB.direction, value);
-            directionalLight.color = Color.Lerp(stateA.color, stateB.color, value);
-            directionalLight.intensity = Mathf.Lerp(
-                stateA.intensity, stateB.intensity, value);
+            directionalLight.transform.eulerAngles =  Vector3.Slerp(stateA.direction, stateB.direction, value_cube);
+            directionalLight.color = Color.Lerp(stateA.color, stateB.color, value_cube);
+            directionalLight.intensity = Mathf.Lerp(stateA.intensity, stateB.intensity, value_cube);
         }
     }
 }

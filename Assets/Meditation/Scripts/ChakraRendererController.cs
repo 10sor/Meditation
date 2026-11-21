@@ -177,7 +177,13 @@ namespace Meditation
             // The crown chakra travels upwards during both breath phases.
             int direction = index == 6 || IsVortexExhaling() ? 1 : -1;
             float vortexVisibility = EvaluateVortexVisibility();
-            Color visibleEffectColor = chakra.effectColor * breath.Intensity * vortexVisibility;
+            bool visualOnlyInhale = breath.IsVisualOnlyBreath &&
+                                    breath.Direction < 0;
+            float vortexIntensity = breath.IsVisualOnlyBreath
+                ? 0f : breath.Intensity;
+            float lightingIntensity = !breath.IsVisualOnlyBreath || visualOnlyInhale
+                ? breath.Intensity : 0f;
+            Color visibleEffectColor = chakra.effectColor * vortexIntensity * vortexVisibility;
             if (sharedVortexMaterial != null)
             {
                 sharedVortexMaterial.SetColor(VortexColorId, visibleEffectColor);
@@ -186,7 +192,7 @@ namespace Meditation
 
             if (vortexLights != null)
             {
-                Color visibleLightColor = chakra.lightColor * breath.Intensity;
+                Color visibleLightColor = chakra.lightColor * lightingIntensity;
                 for (int i = 0; i < vortexLights.Length; i++)
                 {
                     if (vortexLights[i] != null)
@@ -201,7 +207,7 @@ namespace Meditation
 
                 emissionRenderer.GetPropertyBlock(emissionProperties);
                 emissionProperties.SetColor(EmissionColorId,
-                    chakra.effectColor * breath.Intensity);
+                    chakra.effectColor * lightingIntensity);
                 emissionRenderer.SetPropertyBlock(emissionProperties);
             }
 
@@ -223,6 +229,9 @@ namespace Meditation
 
         float EvaluateVortexVisibility()
         {
+            if (breath.IsVisualOnlyBreath)
+                return 0f;
+
             if (!breath.IsCycleRunning)
                 return 0f;
 

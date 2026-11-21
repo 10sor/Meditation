@@ -15,8 +15,13 @@ namespace Meditation
     public sealed class MeditationSequenceController : MonoBehaviour
     {
         [SerializeField] ChakraBreathController breathController;
+        [SerializeField] SceneVisualController visualController;
+        [Tooltip("Starts the sequence automatically when the scene has no start screen.")]
+        [SerializeField] bool autoStart;
         [Min(0f)] [SerializeField] float pauseDuration = 5f;
         [Min(0f)] [SerializeField] float countdownDuration = 3f;
+        [Tooltip("Duration of the visual-only inhale and exhale during countdowns.")]
+        [Min(0f)] [SerializeField] float countdownBreathDuration = 3f;
         [Min(1)] [SerializeField] int cycleCount = 8;
 
         public event Action<ChakraSessionStage> StageStarted;
@@ -38,6 +43,8 @@ namespace Meditation
         {
             if (breathController == null)
                 breathController = GetComponent<ChakraBreathController>();
+            if (visualController == null)
+                visualController = FindAnyObjectByType<SceneVisualController>();
             ResetSequence();
         }
 
@@ -45,6 +52,12 @@ namespace Meditation
         {
             if (breathController != null)
                 breathController.BreathCycleCompleted += OnBreathCycleCompleted;
+        }
+
+        void Start()
+        {
+            if (autoStart)
+                StartMeditation();
         }
 
         void OnDisable()
@@ -70,6 +83,8 @@ namespace Meditation
                 Mathf.Clamp01(elapsed / duration);
             CurrentStageProgress = CurrentStage == ChakraSessionStage.ReverseCountdown
                 ? 1f - progress : progress;
+            ApplyStageVisual();
+            ApplyCountdownBreath(elapsed);
 
             if (elapsed >= duration)
                 CompleteTimedStage();
@@ -93,6 +108,7 @@ namespace Meditation
                 breathController.StopBreathCycle();
             CurrentStageProgress = 0f;
             CurrentBreathCycleIndex = -1;
+            SetVisualBlend(0f);
         }
 
         void CompleteTimedStage()
@@ -118,6 +134,11 @@ namespace Meditation
             CurrentStage = stage;
             CurrentStageProgress = stage == ChakraSessionStage.ReverseCountdown ? 1f : 0f;
             stageStartTime = AudioSettings.dspTime;
+            ApplyStageVisual();
+            if (stage == ChakraSessionStage.ReverseCountdown)
+                ApplyCountdownBreath(0f);
+            else if (stage == ChakraSessionStage.Pause)
+                breathController?.StopVisualOnlyBreath();
             StageStarted?.Invoke(stage);
         }
 
@@ -172,6 +193,9 @@ namespace Meditation
                 IsRunning = false;
                 CurrentStageProgress = 0f;
                 CurrentBreathCycleIndex = -1;
+                SetVisualBlend(0f);
+                if (breathController != null)
+                    breathController.StopVisualOnlyBreath();
                 MeditationCompleted?.Invoke();
                 return;
             }
@@ -191,12 +215,71 @@ namespace Meditation
             CurrentStage = ChakraSessionStage.Pause;
             CurrentStageProgress = 0f;
             CurrentBreathCycleIndex = -1;
+            SetVisualBlend(0f);
+        }
+
+        void ApplyStageVisual()
+        {
+            switch (CurrentStage)
+            {
+                case ChakraSessionStage.Countdown:
+                case ChakraSessionStage.ReverseCountdown:
+                    SetVisualBlend(CurrentStageProgress);
+                    break;
+                case ChakraSessionStage.Breathing:
+                    SetVisualBlend(1f);
+                    break;
+                default:
+                    SetVisualBlend(0f);
+                    break;
+            }
+        }
+
+        void SetVisualBlend(float value)
+        {
+            if (visualController != null)
+                visualController.SetLerp(Mathf.Clamp01(value));
+        }
+
+        void ApplyCountdownBreath(float elapsed)
+        {
+            if (breathController == null)
+                return;
+
+            float breathDuration = Mathf.Min(countdownBreathDuration,
+                countdownDuration);
+            float breathStart = Mathf.Max(0f, countdownDuration - breathDuration);
+            switch (CurrentStage)
+            {
+                case ChakraSessionStage.Countdown:
+                    if (elapsed <= breathStart && breathDuration > 0f)
+                    {
+                        breathController.StopVisualOnlyBreath();
+                        break;
+                    }
+
+                    float inhaleProgress = breathDuration <= 0f ? 1f :
+                        Mathf.Clamp01((elapsed - breathStart) / breathDuration);
+                    breathController.SetVisualOnlyBreath(
+                        inhaleProgress, -1);
+                    break;
+                case ChakraSessionStage.ReverseCountdown:
+                    float exhaleProgress = breathDuration <= 0f ? 1f :
+                        Mathf.Clamp01(elapsed / breathDuration);
+                    breathController.SetVisualOnlyBreath(
+                        1f - exhaleProgress, 1);
+                    break;
+                default:
+                    breathController.StopVisualOnlyBreath();
+                    break;
+            }
         }
 
         void OnValidate()
         {
             pauseDuration = Mathf.Max(0f, pauseDuration);
             countdownDuration = Mathf.Max(0f, countdownDuration);
+            countdownBreathDuration = Mathf.Max(0f, countdownBreathDuration);
             cycleCount = Mathf.Max(1, cycleCount);
         }
     }

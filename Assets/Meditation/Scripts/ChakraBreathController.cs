@@ -36,6 +36,7 @@ namespace Meditation
         public float CycleDuration => ExhaleDuration + HoldDuration +
                                       InhaleDuration + EndPauseDuration;
         public bool IsCycleRunning { get; private set; }
+        public bool IsVisualOnlyBreath { get; private set; }
         public double CycleEndDspTime => sequenceStartDspTime + CycleDuration;
 
         float BeatDuration => 60f / Mathf.Max(1f, beatsPerMinute);
@@ -110,6 +111,8 @@ namespace Meditation
             sequenceStartDspTime = dspStartTime;
             nextBeatToSchedule = 0;
             IsCycleRunning = true;
+            Intensity = 1f;
+            Direction = 1;
             ScheduleAudio();
 
             if (CycleDuration <= 0f)
@@ -122,7 +125,28 @@ namespace Meditation
         public void StopBreathCycle()
         {
             IsCycleRunning = false;
+            IsVisualOnlyBreath = false;
             StopSources();
+            ResetVisualState();
+        }
+
+        public void SetVisualOnlyBreath(float intensity, int direction)
+        {
+            if (IsCycleRunning)
+                return;
+
+            IsVisualOnlyBreath = true;
+            Intensity = Mathf.Clamp01(intensity);
+            Direction = direction >= 0 ? 1 : -1;
+            PhaseTime = 0f;
+        }
+
+        public void StopVisualOnlyBreath()
+        {
+            if (IsCycleRunning)
+                return;
+
+            IsVisualOnlyBreath = false;
             ResetVisualState();
         }
 
@@ -263,6 +287,7 @@ namespace Meditation
         void ResetState()
         {
             IsCycleRunning = false;
+            IsVisualOnlyBreath = false;
             ResetVisualState();
         }
 

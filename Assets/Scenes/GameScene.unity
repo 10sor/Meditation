@@ -432,8 +432,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Meditation.MeditationSequenceController
   breathController: {fileID: 3100000003}
-  pauseDuration: 5
-  countdownDuration: 3
+  visualController: {fileID: 4380238549606479571}
+  autoStart: 1
+  pauseDuration: 10
+  countdownDuration: 5
+  countdownBreathDuration: 2
   cycleCount: 8
 --- !u!108 &2055869812 stripped
 Light:
@@ -640,6 +643,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: Visual
       objectReference: {fileID: 0}
+    - target: {fileID: 4178595169029270128, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_Color.b
+      value: 1.4782538
+      objectReference: {fileID: 0}
+    - target: {fileID: 4178595169029270128, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_Color.g
+      value: 1.4950274
+      objectReference: {fileID: 0}
+    - target: {fileID: 4178595169029270128, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_Color.r
+      value: 1.4980392
+      objectReference: {fileID: 0}
+    - target: {fileID: 4178595169029270128, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_Intensity
+      value: 1.25
+      objectReference: {fileID: 0}
     - target: {fileID: 5157455300480809667, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.45322
@@ -680,11 +699,42 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7986434034799466246, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.9358752
+      objectReference: {fileID: 0}
+    - target: {fileID: 7986434034799466246, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.3523317
+      objectReference: {fileID: 0}
+    - target: {fileID: 7986434034799466246, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7986434034799466246, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8043206336983918547, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+      propertyPath: lerp
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+--- !u!114 &4380238549606479571 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8043206336983918547, guid: af0d861556fa41d4aad210b4cad00940, type: 3}
+  m_PrefabInstance: {fileID: 4380238549606479570}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 546f8ecb626f4e8b90336d845084fb9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Meditation.SceneVisualController
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
